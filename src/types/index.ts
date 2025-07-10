@@ -48,6 +48,7 @@ export interface School {
   phone?: string;
   email?: string;
   website?: string;
+  logo?: string;
 }
 
 export interface ApiResponse<T> {

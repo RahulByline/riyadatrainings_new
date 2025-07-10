@@ -4,20 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../context/LanguageContext';
 import { useInView } from 'react-intersection-observer';
 import { apiService } from '../../services/api';
-import { Building, Users, MapPin, ChevronRight } from 'lucide-react';
+import { Building, Users, MapPin, ChevronRight, Globe, Mail, Phone } from 'lucide-react';
 import { LoadingSpinner } from '../LoadingSpinner';
-
-interface School {
-  id: string;
-  name: string;
-  shortname: string;
-  description?: string;
-  city?: string;
-  country?: string;
-  logo?: string;
-  userCount?: number;
-  courseCount?: number;
-}
+import { School } from '../../types';
 
 export const SchoolsSection: React.FC = () => {
   const { t } = useTranslation();
@@ -29,57 +18,18 @@ export const SchoolsSection: React.FC = () => {
   
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSchools = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        // Mock schools data since IOMAD company API might not be available
-        const mockSchools: School[] = [
-          {
-            id: '1',
-            name: 'Al Riyadh International School',
-            shortname: 'ARIS',
-            description: 'Leading educational institution in Riyadh',
-            city: 'Riyadh',
-            country: 'Saudi Arabia',
-            userCount: 150,
-            courseCount: 25
-          },
-          {
-            id: '2',
-            name: 'Dubai Modern Academy',
-            shortname: 'DMA',
-            description: 'Innovation-focused learning environment',
-            city: 'Dubai',
-            country: 'UAE',
-            userCount: 200,
-            courseCount: 30
-          },
-          {
-            id: '3',
-            name: 'Jeddah Excellence School',
-            shortname: 'JES',
-            description: 'Excellence in education and character building',
-            city: 'Jeddah',
-            country: 'Saudi Arabia',
-            userCount: 120,
-            courseCount: 20
-          },
-          {
-            id: '4',
-            name: 'Abu Dhabi Future School',
-            shortname: 'ADFS',
-            description: 'Preparing students for the future',
-            city: 'Abu Dhabi',
-            country: 'UAE',
-            userCount: 180,
-            courseCount: 28
-          }
-        ];
-        
-        setSchools(mockSchools);
+        const companies = await apiService.getCompanies();
+        setSchools(companies);
       } catch (error) {
         console.error('Error fetching schools:', error);
+        setError('Failed to load schools');
       } finally {
         setLoading(false);
       }
@@ -102,17 +52,39 @@ export const SchoolsSection: React.FC = () => {
             {t('partneredSchools')}
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            {t('schoolsSubtitle')}
+            Excellence in education across the region - {schools.length} partnered institutions
           </p>
         </motion.div>
 
-        {loading ? (
+        {error ? (
+          <div className="text-center py-20">
+            <div className="text-red-500 mb-4">
+              <Building className="w-16 h-16 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Unable to Load Schools
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              {error}. Please try again later.
+            </p>
+          </div>
+        ) : loading ? (
           <div className="flex justify-center items-center py-20">
             <LoadingSpinner size="lg" />
             <span className="ml-4 text-gray-600 dark:text-gray-300">Loading schools...</span>
           </div>
+        ) : schools.length === 0 ? (
+          <div className="text-center py-20">
+            <Building className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              No Schools Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              No partnered schools are currently available to display.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {schools.map((school, index) => (
               <motion.div
                 key={school.id}
@@ -130,19 +102,35 @@ export const SchoolsSection: React.FC = () => {
                       <img
                         src={school.logo}
                         alt={school.name}
-                        className="w-16 h-16 object-contain"
+                        className="w-16 h-16 object-contain bg-white rounded-lg p-2"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.nextElementSibling?.classList.remove('hidden');
+                        }}
                       />
                     ) : (
                       <Building className="w-16 h-16 text-white opacity-80" />
                     )}
+                    {school.logo && (
+                      <Building className="w-16 h-16 text-white opacity-80 hidden" />
+                    )}
                   </div>
                   
-                  {/* Country Badge */}
-                  <div className="absolute top-4 right-4">
-                    <span className="px-3 py-1 bg-white bg-opacity-90 text-xs font-medium rounded-full text-gray-800">
-                      {school.country}
-                    </span>
-                  </div>
+                  {/* Status/Country Badge */}
+                  {(school.country || school.status) && (
+                    <div className="absolute top-4 right-4">
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        school.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : school.status === 'inactive'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-white bg-opacity-90 text-gray-800'
+                      }`}>
+                        {school.country || school.status}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* School Content */}
@@ -162,26 +150,64 @@ export const SchoolsSection: React.FC = () => {
                   )}
 
                   {/* Location */}
-                  {school.city && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      <MapPin className="w-4 h-4" />
-                      <span>{school.city}</span>
-                    </div>
-                  )}
+                  <div className="space-y-2 mb-4">
+                    {school.city && school.country && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{school.city}, {school.country}</span>
+                      </div>
+                    )}
+                    
+                    {school.email && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Mail className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{school.email}</span>
+                      </div>
+                    )}
+                    
+                    {school.phone && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Phone className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{school.phone}</span>
+                      </div>
+                    )}
+                    
+                    {school.website && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Globe className="w-4 h-4 flex-shrink-0" />
+                        <a 
+                          href={school.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
+                          Visit Website
+                        </a>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Stats */}
-                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {school.userCount}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Building className="w-4 h-4" />
-                        {school.courseCount}
-                      </span>
+                  {(school.userCount !== undefined || school.courseCount !== undefined) && (
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      {school.userCount !== undefined && (
+                        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">
+                            {school.userCount}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">Users</div>
+                        </div>
+                      )}
+                      {school.courseCount !== undefined && (
+                        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">
+                            {school.courseCount}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">Courses</div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Action Button */}
                   <motion.div
@@ -197,21 +223,23 @@ export const SchoolsSection: React.FC = () => {
           </div>
         )}
 
-        {/* View All Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="text-center mt-12"
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-2 border-blue-600 dark:border-blue-400 px-8 py-4 rounded-full font-semibold hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-all duration-300"
+        {/* View All Button - Only show if there are schools */}
+        {schools.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="text-center mt-12"
           >
-            View All Schools
-          </motion.button>
-        </motion.div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-2 border-blue-600 dark:border-blue-400 px-8 py-4 rounded-full font-semibold hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-all duration-300"
+            >
+              View All Schools ({schools.length})
+            </motion.button>
+          </motion.div>
+        )}
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { apiService } from '../services/api';
+import axios from 'axios';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Input } from '../components/ui/Input';
@@ -35,12 +35,48 @@ export const SchoolsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const companies = await apiService.getCompanies();
-        setSchools(companies);
-        setFilteredSchools(companies);
+        // Use axios directly to fetch from IOMAD API
+        const response = await axios.get('https://iomad.bylinelms.com/webservice/rest/server.php', {
+          params: {
+            wstoken: '4a2ba2d6742afc7d13ce4cf486ba7633',
+            wsfunction: 'block_iomad_company_admin_get_companies',
+            moodlewsrestformat: 'json',
+          },
+        });
+        
+        // Parse the response data
+        let companies = [];
+        if (response.data && Array.isArray(response.data)) {
+          companies = response.data;
+        } else if (response.data && response.data.companies && Array.isArray(response.data.companies)) {
+          companies = response.data.companies;
+        } else if (response.data && typeof response.data === 'object') {
+          companies = [response.data];
+        }
+        
+        // Map to our School interface
+        const mappedSchools = companies.map((company: any) => ({
+          id: company.id?.toString() || Math.random().toString(),
+          name: company.name || 'Unnamed School',
+          shortname: company.shortname || company.name || 'N/A',
+          description: company.summary || company.description || '',
+          city: company.city,
+          country: company.country,
+          logo: company.companylogo || company.logo_url || company.logourl,
+          address: company.address,
+          phone: company.phone1,
+          email: company.email,
+          website: company.url,
+          userCount: company.usercount || 0,
+          courseCount: company.coursecount || 0,
+          status: company.suspended ? 'inactive' : 'active'
+        }));
+        
+        setSchools(mappedSchools);
+        setFilteredSchools(mappedSchools);
       } catch (error) {
         console.error('Error fetching schools:', error);
-        setError('Failed to load schools. Please try again.');
+        setError('Failed to fetch schools from IOMAD API. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -145,15 +181,25 @@ export const SchoolsPage: React.FC = () => {
                       <img
                         src={school.logo}
                         alt={school.name}
-                        className="w-16 h-16 object-contain bg-white rounded-lg p-2"
+                        className="h-20 w-auto mx-auto object-contain bg-white rounded-lg p-2"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
+                          const fallback = target.parentElement?.querySelector('.fallback-text');
+                          if (fallback) fallback.classList.remove('hidden');
                         }}
                       />
                     ) : (
-                      <Building className="w-16 h-16 text-white opacity-80" />
+                      <div className="text-center text-white">
+                        <Building className="w-16 h-16 mx-auto opacity-80 mb-2" />
+                        <span className="text-xs">No Logo</span>
+                      </div>
+                    )}
+                    {school.logo && (
+                      <div className="fallback-text hidden text-center text-white">
+                        <Building className="w-16 h-16 mx-auto opacity-80 mb-2" />
+                        <span className="text-xs">No Logo</span>
+                      </div>
                     )}
                   </div>
                   

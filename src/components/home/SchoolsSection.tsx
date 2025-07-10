@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../context/LanguageContext';
 import { useInView } from 'react-intersection-observer';
-import { apiService } from '../../services/api';
+import axios from 'axios';
 import { Building, Users, MapPin, ChevronRight, Globe, Mail, Phone } from 'lucide-react';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { School } from '../../types';
@@ -25,11 +25,47 @@ export const SchoolsSection: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const companies = await apiService.getCompanies();
-        setSchools(companies);
+        // Use axios directly as requested
+        const response = await axios.get('https://iomad.bylinelms.com/webservice/rest/server.php', {
+          params: {
+            wstoken: '4a2ba2d6742afc7d13ce4cf486ba7633',
+            wsfunction: 'block_iomad_company_admin_get_companies',
+            moodlewsrestformat: 'json',
+          },
+        });
+        
+        // Parse the response data
+        let companies = [];
+        if (response.data && Array.isArray(response.data)) {
+          companies = response.data;
+        } else if (response.data && response.data.companies && Array.isArray(response.data.companies)) {
+          companies = response.data.companies;
+        } else if (response.data && typeof response.data === 'object') {
+          companies = [response.data];
+        }
+        
+        // Map to our School interface
+        const mappedSchools = companies.map((company: any) => ({
+          id: company.id?.toString() || Math.random().toString(),
+          name: company.name || 'Unnamed School',
+          shortname: company.shortname || company.name || 'N/A',
+          description: company.summary || company.description || '',
+          city: company.city,
+          country: company.country,
+          logo: company.companylogo || company.logo_url || company.logourl,
+          address: company.address,
+          phone: company.phone1,
+          email: company.email,
+          website: company.url,
+          userCount: company.usercount || 0,
+          courseCount: company.coursecount || 0,
+          status: company.suspended ? 'inactive' : 'active'
+        }));
+        
+        setSchools(mappedSchools);
       } catch (error) {
         console.error('Error fetching schools:', error);
-        setError('Failed to load schools');
+        setError('Failed to fetch schools from IOMAD API');
       } finally {
         setLoading(false);
       }
@@ -102,32 +138,47 @@ export const SchoolsSection: React.FC = () => {
                       <img
                         src={school.logo}
                         alt={school.name}
-                        className="w-16 h-16 object-contain bg-white rounded-lg p-2"
+                        className="h-20 w-auto mx-auto object-contain bg-white rounded-lg p-2"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
+                          const fallback = target.parentElement?.querySelector('.fallback-logo');
+                          if (fallback) fallback.classList.remove('hidden');
                         }}
                       />
                     ) : (
-                      <Building className="w-16 h-16 text-white opacity-80" />
+                      <div className="text-center text-white">
+                        <Building className="w-16 h-16 mx-auto opacity-80 mb-2" />
+                        <span className="text-xs">No Logo</span>
+                      </div>
                     )}
                     {school.logo && (
                       <Building className="w-16 h-16 text-white opacity-80 hidden" />
                     )}
+                    {school.logo && (
+                      <div className="fallback-logo hidden text-center text-white">
+                        <Building className="w-16 h-16 mx-auto opacity-80 mb-2" />
+                        <span className="text-xs">No Logo</span>
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Status/Country Badge */}
-                  {(school.country || school.status) && (
-                    <div className="absolute top-4 right-4">
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        school.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : school.status === 'inactive'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-white bg-opacity-90 text-gray-800'
-                      }`}>
-                        {school.country || school.status}
+                  {/* Status Badge */}
+                  <div className="absolute top-4 right-4">
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      school.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {school.status}
+                    </span>
+                  </div>
+                  
+                  {/* Country Badge */}
+                  {school.country && (
+                    <div className="absolute top-4 left-4">
+                      <span className="px-3 py-1 text-xs font-medium rounded-full bg-white bg-opacity-90 text-gray-800">
+                        {school.country}
                       </span>
                     </div>
                   )}
@@ -135,88 +186,23 @@ export const SchoolsSection: React.FC = () => {
 
                 {/* School Content */}
                 <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-center font-bold text-lg text-gray-900 mb-2">
                     {school.name}
                   </h3>
                   
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-3">
+                  <p className="text-center text-sm text-blue-600 mb-3">
                     {school.shortname}
                   </p>
                   
                   {school.description && (
-                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2">
-                      {school.description}
+                    <p className="text-center text-sm text-gray-600 mb-4">
+                      {school.description || 'No description'}
                     </p>
                   )}
 
-                  {/* Location */}
-                  <div className="space-y-2 mb-4">
-                    {school.city && school.country && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <MapPin className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{school.city}, {school.country}</span>
-                      </div>
-                    )}
-                    
-                    {school.email && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <Mail className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{school.email}</span>
-                      </div>
-                    )}
-                    
-                    {school.phone && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <Phone className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{school.phone}</span>
-                      </div>
-                    )}
-                    
-                    {school.website && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <Globe className="w-4 h-4 flex-shrink-0" />
-                        <a 
-                          href={school.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                          Visit Website
-                        </a>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Stats */}
-                  {(school.userCount !== undefined || school.courseCount !== undefined) && (
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      {school.userCount !== undefined && (
-                        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                          <div className="text-lg font-bold text-gray-900 dark:text-white">
-                            {school.userCount}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-300">Users</div>
-                        </div>
-                      )}
-                      {school.courseCount !== undefined && (
-                        <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                          <div className="text-lg font-bold text-gray-900 dark:text-white">
-                            {school.courseCount}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-300">Courses</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Action Button */}
-                  <motion.div
-                    whileHover={{ x: isRTL ? -5 : 5 }}
-                    className="flex items-center justify-between text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors"
-                  >
-                    <span className="text-sm font-medium">View School</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </motion.div>
+                  <button className="mt-2 block mx-auto text-sm text-blue-600 underline hover:text-blue-800 transition-colors">
+                    View Details
+                  </button>
                 </div>
               </motion.div>
             ))}

@@ -152,8 +152,9 @@ export const SchoolsPage: React.FC = () => {
                           target.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
+                    ) : (
+                      <Building className="w-16 h-16 text-white opacity-80" />
                     )}
-                    <Building className={`w-16 h-16 text-white opacity-80 ${school.logo ? 'hidden' : ''}`} />
                   </div>
                   
                   {/* Status Badge */}

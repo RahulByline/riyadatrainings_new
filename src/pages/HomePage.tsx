@@ -7,6 +7,7 @@ import { AboutSection } from '../components/home/AboutSection';
 import { CoursesSection } from '../components/home/CoursesSection';
 import { SchoolsSection } from '../components/home/SchoolsSection';
 import { AssessmentSection } from '../components/home/AssessmentSection';
+import { CourseBrowserSection } from '../components/home/CourseBrowserSection';
 import { RoleLoginSection } from '../components/home/RoleLoginSection';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/home/Footer';
@@ -22,7 +23,7 @@ export const HomePage: React.FC = () => {
       <main>
         <HeroSection />
         <AboutSection />
-        <CoursesSection />
+        <CourseBrowserSection />
         <SchoolsSection />
         <AssessmentSection />
         <RoleLoginSection />

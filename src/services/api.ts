@@ -243,38 +243,37 @@ export const apiService = {
 
   async getCompanies(): Promise<any[]> {
     try {
-      // Try to fetch companies using IOMAD-specific function
+      // Fetch companies using IOMAD-specific function
       const response = await api.get('', {
         params: {
-          wsfunction: 'tool_iomad_company_get_companies',
+          wsfunction: 'block_iomad_company_admin_get_companies',
         },
       });
 
-      if (response.data && Array.isArray(response.data)) {
+      if (response.data && response.data.companies && Array.isArray(response.data.companies)) {
+        return response.data.companies.map((company: any) => ({
+          id: company.id.toString(),
+          name: company.name,
+          shortname: company.shortname,
+          description: company.summary || company.description,
+          city: company.city,
+          country: company.country,
+          logo: company.logo_url || company.logourl,
+          address: company.address,
+          phone: company.phone1,
+          email: company.email,
+          website: company.url,
+          userCount: company.usercount || 0,
+          courseCount: company.coursecount || 0,
+          status: company.suspended ? 'inactive' : 'active'
+        }));
+      } else if (response.data && Array.isArray(response.data)) {
         return response.data;
       }
       return [];
     } catch (error) {
       console.error('Error fetching companies:', error);
-      // Return mock data if API is not available
-      return [
-        {
-          id: '1',
-          name: 'Al Riyadh International School',
-          shortname: 'ARIS',
-          description: 'Leading educational institution in Riyadh',
-          city: 'Riyadh',
-          country: 'Saudi Arabia'
-        },
-        {
-          id: '2',
-          name: 'Dubai Modern Academy',
-          shortname: 'DMA',
-          description: 'Innovation-focused learning environment',
-          city: 'Dubai',
-          country: 'UAE'
-        }
-      ];
+      throw new Error('Failed to fetch companies');
     }
   },
 

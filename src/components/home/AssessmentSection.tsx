@@ -171,7 +171,11 @@ export const AssessmentSection: React.FC = () => {
                 transition={{ duration: 0.6, delay: 1 }}
                 className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700"
               >
-                <Button size="lg" className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
+                <Button 
+                  size="lg" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                  onClick={() => window.open('https://riyara-dashboard.bylinelms.com/self-assessment/', '_blank')}
+                >
                   <BarChart3 className="w-5 h-5" />
                   Start Assessment
                   <ArrowRight className="w-5 h-5" />
